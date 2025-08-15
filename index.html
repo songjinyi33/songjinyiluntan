@@ -1,0 +1,598 @@
+html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>万象模拟器 OmniSim v1.4 (协议增强版)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #FAFAFA;
+            --secondary-bg: #F0F2F5;
+            --header-bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --accent-color: #6A88A6; /* 沉静的蓝灰色 */
+            --accent-hover: #819DB8;
+            --text-color: #1F2329; /* 深灰 */
+            --text-muted: #6E7681;
+            --border-color: #D8DEE4;
+            --modal-bg: rgba(240, 242, 245, 0.9);
+            --danger-color: #E57373;
+            --success-color: #7A9E8B;
+            --font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+        }
+        html, body { height: 100%; 
+    margin: 0; 
+    padding: 0; 
+    overflow-x: hidden; font-family: var(--font-family); background-color: var(--secondary-bg); color: var(--text-color); }
+        .app-container { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
+        .omnisim-app { width: 100%; height: 100%; max-width: 450px; max-height: 100dvh; background-color: var(--primary-bg); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); position: relative; }
+        @media (min-width: 451px) { .omnisim-app {height: 850px; max-height: 850px; border-radius: 24px; border: 1px solid var(--border-color); } }
+
+        .footer-credit { display: none; font-size: 12px; color: var(--text-muted); text-align: center; padding: 8px 0; background-color: var(--primary-bg); width: 100%; max-width: 450px; box-sizing: border-box; border-top: 1px solid var(--border-color); }
+
+        /* --- 世界铸造厂 (World Forge) --- */
+        #world-forge-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-bg); z-index: 2000; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .forge-container { width: 100%; max-width: 500px; margin: auto; padding-bottom: 20px; }
+        .forge-header { text-align: center; margin-bottom: 30px; }
+        .forge-title { font-size: 28px; font-weight: 700; color: var(--text-color); letter-spacing: 1px; }
+        .forge-subtitle { color: var(--text-muted); font-size: 16px; margin-top: 5px; }
+        .forge-section { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .forge-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 18px; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; display: flex; align-items: center; gap: 10px;}
+        .forge-input, .forge-textarea, .forge-select { width: 100%; padding: 12px; background-color: var(--secondary-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; box-sizing: border-box; font-size: 14px; -webkit-appearance: none; appearance: none; }
+        .forge-textarea { min-height: 120px; resize: vertical; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: var(--text-muted); }
+        #persona-list-container .persona-card { background: #fdfdfd; border: 1px dashed var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+        #persona-list-container .persona-card h4 { margin: 0 0 10px; }
+        .persona-card-actions { position: absolute; top: 10px; right: 10px; }
+        .persona-card-actions button { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-muted); padding: 5px; }
+        .persona-card-actions button:hover { color: var(--accent-color); }
+        .forge-button { background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)); color: white; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; display: block; width: 100%; text-align: center; font-size: 16px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(106, 136, 166, 0.3); }
+        .forge-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(106, 136, 166, 0.4); }
+        .forge-button.secondary { background: white; color: var(--accent-color); border: 1px solid var(--accent-color); box-shadow: none; }
+        #persona-form { background-color: var(--secondary-bg); padding: 20px; border-radius: 8px; margin-top: 15px; border: 1px solid var(--border-color); }
+        #persona-form h4 { margin-top:0; text-align:center; }
+        #forge-actions { margin-top: 20px; }
+
+        /* --- 主应用通用样式 --- */
+        .app-header { background-color: var(--header-bg); padding: 15px; font-weight: 500; font-size: 18px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; color: var(--text-color); text-align: center; position: relative; z-index: 2; }
+        .app-main { flex-grow: 1; overflow: hidden; position: relative; background-color: var(--secondary-bg); }
+        .page { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; background-color: var(--secondary-bg); opacity: 0; visibility: hidden; transition: opacity 0.3s ease; overflow-y: auto; scrollbar-width: none; }
+        .page::-webkit-scrollbar { display: none; }
+        .page.active { opacity: 1; visibility: visible; z-index: 1;}
+        .action-button { background-color: var(--accent-color); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; display: block; width: 100%; margin: 10px 0; text-align: center; font-size: 16px; transition: background-color 0.2s, transform 0.2s, opacity 0.2s; }
+        .action-button:hover:not(:disabled) { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .action-button.secondary { background-color: #fff; color: var(--accent-color); border: 1px solid var(--accent-color); }
+        .action-button:disabled { background-color: #E0E0E0 !important; color: #BDBDBD !important; cursor: not-allowed !important; border-color: #E0E0E0 !important; transform: none !important; opacity: 0.7; }
+
+        .empty-state { text-align: center; color: var(--text-muted); padding: 50px 20px; }
+        .loading-spinner { border: 4px solid rgba(106, 136, 166, 0.2); border-top: 4px solid var(--accent-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #settings-fab { position: fixed; right: 25px; bottom: 80px; width: 50px; height: 50px; background-color: var(--text-color); border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 24px; color: white; cursor: pointer; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s; }
+        #settings-fab:hover { transform: rotate(45deg); }
+        @media (min-width: 451px) { #settings-fab { right: calc(50% - 225px + 25px); bottom: 85px; } }
+
+        .app-nav { display: flex; background-color: var(--header-bg); border-top: 1px solid var(--border-color); flex-shrink: 0; z-index: 2; padding: 5px 0; }
+        .nav-item { flex: 1; padding: 8px 0; text-align: center; color: var(--text-muted); cursor: pointer; font-size: 14px; position: relative; transition: color 0.2s; }
+        .nav-item.active { color: var(--accent-color); font-weight: 500; }
+        
+        .post-card { background-color: var(--card-bg); border-radius: 12px; margin-bottom: 15px; padding: 20px; position: relative; border: 1px solid var(--border-color); }
+        .post-header { display: flex; align-items: center; margin-bottom: 12px; }
+        .post-author-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--accent-color); margin-right: 12px; display:flex; justify-content: center; align-items: center; font-weight: bold; flex-shrink: 0; color: white; font-size: 18px; }
+        .post-author-details .name { font-weight: 500; color: var(--text-color); }
+        .post-author-details .time { font-size: 0.8rem; color: var(--text-muted); }
+        .post-content { color: var(--text-color); margin-bottom: 15px; line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word; }
+        .post-footer { display: flex; justify-content: space-around; border-top: 1px solid var(--border-color); padding-top: 10px; margin: 0 -20px -10px -20px; }
+        .footer-action { color: var(--text-muted); cursor: pointer; font-size: 0.9rem; flex: 1; text-align: center; padding: 5px 0; transition: color 0.2s, background-color 0.2s; }
+        .footer-action:hover, .footer-action.liked { color: var(--accent-color); }
+        .comments-section { margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+        .comment { font-size: 0.9rem; margin-bottom: 15px; padding-left: 15px; border-left: 2px solid var(--border-color); white-space: pre-wrap; word-break: break-word; position: relative; }
+        .comment-author { font-weight: bold; color: var(--text-color); cursor: pointer; }
+        .comment-author:hover { text-decoration: underline; }
+        .comment-text .mention { color: var(--accent-color); font-weight: 500; }
+        .delete-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 24px; opacity: 0.5; transition: opacity 0.2s, color 0.2s; }
+        .delete-btn:hover { opacity: 1; color: var(--danger-color); }
+        .comment .delete-btn { top: 0; right: 0; font-size: 20px;}
+
+        #page-profile { padding: 0 !important; }
+        .profile-header { background: linear-gradient(135deg, #BCC9D8, var(--accent-color)); padding: 30px 25px 20px; text-align: center; color: white; }
+        .profile-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); display: inline-flex; justify-content: center; align-items: center; font-size: 36px; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.2); }
+        .profile-name { font-size: 22px; font-weight: 500; }
+        .profile-id { font-size: 13px; opacity: 0.8; margin-bottom: 5px; }
+        .profile-bio { font-size: 14px; opacity: 0.9; max-width: 80%; margin: 0 auto; }
+        .profile-content { padding: 25px; }
+        .action-list button { background-color: var(--card-bg); color: var(--text-color); text-align: left; padding: 18px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 10px; width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 1rem; cursor:pointer; }
+        .action-list button:hover { background-color: #F8F9FA; }
+        .action-list button .arrow { font-weight: bold; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-bg); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background: var(--card-bg); padding: 25px 30px; border-radius: 16px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .modal-content h2 { margin-top: 0; font-size: 20px; color: var(--text-color); text-align: center; font-weight: 500; }
+        .form-group textarea, .form-group select { width: 100%; padding: 12px; background-color: var(--secondary-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; box-sizing: border-box; font-size: 14px; -webkit-appearance: none; appearance: none;}
+        
+        #toast-container { position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%); background-color: rgba(31, 35, 41, 0.9); color: #fff; padding: 12px 22px; border-radius: 25px; z-index: 3000; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; backdrop-filter: blur(5px); }
+        #toast-container.show { opacity: 1; bottom: 90px; }
+
+        #api-modal .form-group input, #api-modal .form-group select { width: 100%; padding: 12px; background-color: var(--secondary-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <!-- World Forge Page (Initial Setup) -->
+    <div id="world-forge-page">
+        <div class="forge-container">
+            <header class="forge-header">
+                <h1 class="forge-title">万象模拟器</h1>
+                <p class="forge-subtitle">第一步：铸造你的世界</p>
+            </header>
+
+            <div class="forge-section">
+                <h3><span style="font-size:24px; vertical-align: -4px;">🌍</span> 世界设定</h3>
+                <div class="form-group">
+                    <label for="world-name-input">世界名称</label>
+                    <input type="text" id="world-name-input" class="forge-input" placeholder="例如：永夜都市-涅槃">
+                </div>
+                <div class="form-group">
+                    <label for="worldview-input">核心世界观 (AI将基于此进行演绎)</label>
+                    <textarea id="worldview-input" class="forge-textarea" placeholder="详细描述你的世界背景、主要势力、科技水平、核心冲突、当前年代等。"></textarea>
+                </div>
+                 <div class="form-group">
+                    <label for="ai-directive-input">AI扮演指令 (定义路人/网友风格)</label>
+                    <textarea id="ai-directive-input" class="forge-textarea" placeholder="例如：扮演赛博朋克世界里冷漠、使用黑话的网友；扮演奇幻世界里虔诚或迷信的民众；扮演宫斗世界里谨言慎行的宫人。"></textarea>
+                </div>
+            </div>
+
+            <div class="forge-section">
+                <h3><span style="font-size:24px; vertical-align: -4px;">👥</span> 核心角色</h3>
+                <div id="persona-list-container"></div>
+                <div id="persona-form" style="display: none;">
+                    <h4 id="persona-form-title">添加新角色</h4>
+                    <input type="hidden" id="editing-persona-index">
+                    <div class="form-group"><label for="persona-name">姓名</label><input type="text" id="persona-name" class="forge-input"></div>
+                    <div class="form-group"><label for="persona-id">ID (用于@和内部识别, 英文)</label><input type="text" id="persona-id" class="forge-input"></div>
+                    <div class="form-group"><label for="persona-bio">一句话简介</label><input type="text" id="persona-bio" class="forge-input"></div>
+                    <div class="form-group"><label for="persona-desc">详细人设</label><textarea id="persona-desc" class="forge-textarea"></textarea></div>
+                    <button id="save-persona-btn" class="forge-button">保存角色</button>
+                    <button id="cancel-persona-btn" class="forge-button secondary" style="margin-top: 10px;">取消</button>
+                </div>
+                <button id="add-persona-btn" class="forge-button secondary" style="margin-top: 15px;">+ 添加角色</button>
+            </div>
+            
+            <div class="forge-section">
+                <h3><span style="font-size:24px; vertical-align: -4px;">🔑</span> 网络凭证 (API)</h3>
+                 <div class="form-group">
+                    <label for="forge-api-protocol-select">网络协议类型</label>
+                    <select id="forge-api-protocol-select" class="forge-select">
+                        <option value="gemini">Google Gemini (原生/部分中转)</option>
+                        <option value="openai">OpenAI (兼容大多数中转)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label for="forge-api-key-input">凭证密钥 (API Key)</label><input type="password" id="forge-api-key-input" class="forge-input"></div>
+                <div class="form-group"><label for="forge-api-url-input">节点地址 (Base URL)</label><input type="text" id="forge-api-url-input" class="forge-input" placeholder="例如: https://api.example.com"></div>
+                <div class="form-group"><label for="forge-api-model-input">协议模型 (Model)</label><input type="text" id="forge-api-model-input" class="forge-input" placeholder="例如: gemini-pro 或 gpt-3.5-turbo"></div>
+            </div>
+
+            <div id="forge-actions">
+                <button id="forge-world-btn" class="forge-button">铸造并进入世界</button>
+                <button id="forge-import-btn" class="forge-button secondary" style="margin-top: 10px;">导入世界设定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container">
+        <div class="omnisim-app" style="display: none;">
+            <header class="app-header" id="app-header-title">动态广场</header>
+            <main class="app-main">
+                <!-- 动态广场页面 -->
+                <div id="page-timeline" class="page active">
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button id="user-post-btn" class="action-button" style="flex:1;">发布动态</button>
+                        <button id="ai-post-btn" class="action-button secondary" style="flex:1;">广场新动态</button>
+                    </div>
+                    <div id="timeline-posts-list"></div>
+                </div>
+                <!-- 我的页面 -->
+                <div id="page-profile" class="page">
+                     <div class="profile-header">
+                        <div class="profile-avatar" id="profile-avatar"></div>
+                        <div class="profile-name" id="profile-name"></div>
+                        <div class="profile-id" id="profile-id"></div>
+                        <div class="profile-bio" id="profile-bio"></div>
+                     </div>
+                     <div class="profile-content">
+                         <div class="action-list">
+                             <button id="persona-btn">切换身份 <span class="arrow">&gt;</span></button>
+                             <button id="regenerate-world-btn">重塑世界 <span class="arrow">&gt;</span></button>
+                             <button id="export-world-btn">导出世界设定 <span class="arrow">&gt;</span></button>
+                             <button id="import-world-btn">导入世界设定 <span class="arrow">&gt;</span></button>
+                         </div>
+                     </div>
+                </div>
+            </main>
+
+            <nav class="app-nav">
+                <div class="nav-item active" data-page="timeline">广场</div>
+                <div class="nav-item" data-page="profile">我的</div>
+            </nav>
+            
+            <div id="settings-fab">⚙️</div>
+
+            <!-- Modals -->
+            <div class="modal-overlay" id="api-modal">
+                <div class="modal-content">
+                    <h2>网络设置</h2>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;">此设置仅保存在本地浏览器</p>
+                    <div class="form-group">
+                        <label for="api-protocol-select">网络协议类型</label>
+                        <select id="api-protocol-select">
+                            <option value="gemini">Google Gemini (原生/部分中转)</option>
+                            <option value="openai">OpenAI (兼容大多数中转)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="api-key-input">凭证密钥 (API Key)</label><input type="password" id="api-key-input"></div>
+                    <div class="form-group"><label for="api-url-input">节点地址 (Base URL)</label><input type="text" id="api-url-input"></div>
+                    <div class="form-group"><label for="api-model-input">协议模型 (Model)</label><input type="text" id="api-model-input"></div>
+                    <button id="save-api-button" class="action-button">保存并连接</button>
+                </div>
+            </div>
+            <div class="modal-overlay" id="post-modal">
+                <div class="modal-content">
+                    <h2>发布新动态</h2>
+                    <div class="form-group"><textarea id="post-content-input" rows="5" placeholder="分享动态..."></textarea></div>
+                    <button id="submit-post-button" class="action-button">发布</button>
+                </div>
+            </div>
+            <div class="modal-overlay" id="comment-modal">
+                <div class="modal-content">
+                    <h2>发表评论</h2>
+                    <div class="form-group"><textarea id="comment-content-input" rows="4" placeholder="说点什么吧... 可使用 @角色ID 进行回复"></textarea></div>
+                    <button id="submit-comment-button" class="action-button">评论</button>
+                </div>
+            </div>
+            <div class="modal-overlay" id="persona-modal">
+                <div class="modal-content">
+                    <h2>切换身份</h2>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;">选择一个身份继续探索</p>
+                    <div class="form-group">
+                        <select id="persona-select"></select>
+                    </div>
+                    <button class="action-button" id="save-persona-switch-button">确认切换</button>
+                </div>
+            </div>
+        </div>
+        <div class="footer-credit" id="footer-credit">作者：喵 © 2025</div>
+    </div>
+    <div id="toast-container"></div>
+    <input type="file" id="import-file-input" style="display:none;" accept=".json">
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const WORLD_DATA_KEY = 'OMNISIM_WORLD_DATA_V1.4'; // 版本号更新
+        const APP_STATE_KEY = 'OMNISIM_APP_STATE_V1.4';   // 版本号更新
+        const MAX_POSTS = 200;
+        const POSTS_TO_TRIM = 50; 
+        
+        let worldData = {
+            worldName: '',
+            worldview: '',
+            aiDirective: '',
+            personas: [],
+            // **v1.4 新增：API配置更详细**
+            apiConfig: { 
+                protocol: 'gemini', // 'gemini' or 'openai'
+                key: '', 
+                url: '', 
+                model: '' 
+            }
+        };
+
+        let appState = {
+            currentUserPersonaId: null,
+            currentPage: 'timeline',
+            posts: []
+        };
+        
+        let recentSpeakers = [];
+        const RECENT_SPEAKER_MEMORY = 5;
+
+        // 对所有DOM元素的引用保持不变，但新增API协议选择器
+        const elements = {
+            worldForgePage: document.getElementById('world-forge-page'),
+            omnisimApp: document.querySelector('.omnisim-app'),
+            footerCredit: document.getElementById('footer-credit'),
+            worldNameInput: document.getElementById('world-name-input'),
+            worldviewInput: document.getElementById('worldview-input'),
+            aiDirectiveInput: document.getElementById('ai-directive-input'),
+            personaListContainer: document.getElementById('persona-list-container'),
+            personaForm: document.getElementById('persona-form'),
+            personaFormTitle: document.getElementById('persona-form-title'),
+            editingPersonaIndex: document.getElementById('editing-persona-index'),
+            personaName: document.getElementById('persona-name'),
+            personaId: document.getElementById('persona-id'),
+            personaBio: document.getElementById('persona-bio'),
+            personaDesc: document.getElementById('persona-desc'),
+            addPersonaBtn: document.getElementById('add-persona-btn'),
+            savePersonaBtn: document.getElementById('save-persona-btn'),
+            cancelPersonaBtn: document.getElementById('cancel-persona-btn'),
+            // **v1.4 新增**
+            forgeApiProtocolSelect: document.getElementById('forge-api-protocol-select'),
+            forgeApiKeyInput: document.getElementById('forge-api-key-input'),
+            forgeApiUrlInput: document.getElementById('forge-api-url-input'),
+            forgeApiModelInput: document.getElementById('forge-api-model-input'),
+            forgeWorldBtn: document.getElementById('forge-world-btn'),
+            forgeImportBtn: document.getElementById('forge-import-btn'),
+            
+            headerTitle: document.getElementById('app-header-title'),
+            pages: document.querySelectorAll('.page'),
+            navItems: document.querySelectorAll('.nav-item'),
+            timelinePostsList: document.getElementById('timeline-posts-list'),
+            aiPostBtn: document.getElementById('ai-post-btn'),
+            userPostBtn: document.getElementById('user-post-btn'),
+            
+            profileAvatar: document.getElementById('profile-avatar'),
+            profileName: document.getElementById('profile-name'),
+            profileId: document.getElementById('profile-id'),
+            profileBio: document.getElementById('profile-bio'),
+            personaBtn: document.getElementById('persona-btn'),
+            regenerateWorldBtn: document.getElementById('regenerate-world-btn'),
+            exportWorldBtn: document.getElementById('export-world-btn'),
+            importWorldBtn: document.getElementById('import-world-btn'),
+            importFileInput: document.getElementById('import-file-input'),
+
+            toast: document.getElementById('toast-container'),
+            settingsFab: document.getElementById('settings-fab'),
+            apiModal: document.getElementById('api-modal'),
+            // **v1.4 新增**
+            apiProtocolSelect: document.getElementById('api-protocol-select'),
+            apiKeyInput: document.getElementById('api-key-input'),
+            apiUrlInput: document.getElementById('api-url-input'),
+            apiModelInput: document.getElementById('api-model-input'),
+            saveApiBtn: document.getElementById('save-api-button'),
+            
+            postModal: document.getElementById('post-modal'),
+            postContentInput: document.getElementById('post-content-input'),
+            submitPostBtn: document.getElementById('submit-post-button'),
+            
+            commentModal: document.getElementById('comment-modal'),
+            commentContentInput: document.getElementById('comment-content-input'),
+            submitCommentBtn: document.getElementById('submit-comment-button'),
+
+            personaModal: document.getElementById('persona-modal'),
+            personaSelect: document.getElementById('persona-select'),
+            savePersonaSwitchBtn: document.getElementById('save-persona-switch-button'),
+        };
+
+        let loadingState = { isAiTyping: false, commentingOnPostId: null };
+
+        function saveWorldData() { localStorage.setItem(WORLD_DATA_KEY, JSON.stringify(worldData)); }
+        function saveAppState() {
+            if (appState.posts.length > MAX_POSTS) {
+                appState.posts.splice(MAX_POSTS - POSTS_TO_TRIM);
+                showToast("为保持世界流畅，部分陈旧动态已被存档。", 4000);
+            }
+            localStorage.setItem(APP_STATE_KEY, JSON.stringify(appState));
+        }
+        
+        function loadData() {
+            const savedWorld = localStorage.getItem(WORLD_DATA_KEY);
+            const savedState = localStorage.getItem(APP_STATE_KEY);
+            if (savedWorld) {
+                const parsedWorld = JSON.parse(savedWorld);
+                // 向后兼容旧数据
+                if (!parsedWorld.apiConfig.protocol) {
+                    parsedWorld.apiConfig.protocol = 'gemini';
+                }
+                worldData = parsedWorld;
+            }
+            if (savedState) appState = JSON.parse(savedState);
+        }
+
+        // --- AI Interaction (v1.4 Major Refactor) ---
+        function generateSystemPrompt(excludePersonaNames = []) {
+            const personaDatabase = worldData.personas.reduce((acc, p) => {
+                acc[p.name] = { id: p.id, bio: p.bio, description: p.desc };
+                return acc;
+            }, {});
+
+            let exclusionInstruction = '';
+            if (excludePersonaNames.length > 0) {
+                 exclusionInstruction = `\n**重要禁令: 你绝不可以扮演以下角色: ${JSON.stringify([...new Set(excludePersonaNames)])}。**`;
+            }
+
+            const interactionInstruction = `
+**核心互动原则：**
+1.  **上下文感知**: 你的所有回复都必须紧密结合帖子的内容和之前的评论，做出有逻辑、有深度的回应。
+2.  **玩家优先**: 在评论区，由真人玩家（即与你交互的用户）发表的评论是最高优先级的互动目标。你的首要任务是让核心角色对玩家的评论做出符合人设的直接回应（赞同、反驳、质疑、调情等），让世界围绕玩家转动。
+3.  **主动对话**: 不要只是简单地评论，要像真人一样对话。如果玩家的言论提及了某个角色，请务必让该角色或其关系密切者（盟友/敌人）登场回应，可以开启新的话题，或通过@角色ID来点名互动。让对话流动起来！
+`;
+
+            return `你是一个服务于“万象模拟器”平台的AI引擎。你必须严格扮演用户定义的世界中的角色，并以合法的JSON格式返回。你的回答中不能包含 " \`\`\`json " 和 " \`\`\` "。
+
+**世界设定 (Worldview):**
+当前世界名为: 【${worldData.worldName}】(当前年份: 2025)
+核心世界观:
+${worldData.worldview}
+
+**核心角色数据库 (你必须严格遵循):**
+${JSON.stringify(personaDatabase, null, 2)}
+${exclusionInstruction}
+
+**AI行为指令 (路人/网友风格):**
+${worldData.aiDirective || "扮演普通、中立的网友。"}
+
+${interactionInstruction}
+
+**任务指令:**
+
+1.  **任务: "GENERATE_POST"**: 随机扮演一名**核心角色**或**符合AI行为指令的匿名网友**，发布一条完全符合其人设和当前世界观的动态。
+    **响应格式 (JSON):** \`{"id": "post-...", "author": "角色姓名", "content": "动态内容", "liked": false, "comments": []}\`
+
+2.  **任务: "GENERATE_REPLIES"**: 扮演多个角色或匿名网友，对指定动态及其评论进行互动回复。
+    - **请求格式:** \`{"task": "GENERATE_REPLIES", "post": {"author": "...", "content": "..."}, "fullCommentHistory": [{"author": "...", "text": "..."}, ...], "commentersToExclude": [...] }\`
+    - **响应格式 (JSON数组):** \`[ {"author": "角色姓名", "text": "评论内容"}, ... ]\`
+`;
+        }
+        
+        async function callAI(payload, exclusionList = []) {
+            const { protocol, key, url, model } = worldData.apiConfig;
+            if (!key || !url || !model) { showToast("错误: API配置不完整。请在设置中检查。"); return null; }
+            if (loadingState.isAiTyping) { showToast("AI正在思考，请稍候..."); return null; }
+            setAiTyping(true);
+
+            const currentUser = getCurrentUserPersona();
+            if (currentUser) {
+                exclusionList.push(currentUser.name);
+            }
+
+            const finalExclusionList = [...new Set([...exclusionList, ...recentSpeakers])];
+            const systemPrompt = generateSystemPrompt(finalExclusionList);
+            
+            let requestUrl, requestOptions;
+            let rawText = ''; // 提前声明，便于在catch中引用
+
+            try {
+                // 根据协议类型构建不同的请求
+                if (protocol === 'gemini') {
+                    requestUrl = `${url}/v1beta/models/${model}:generateContent`;
+                    const contents = [ 
+                        { role: "user", parts: [{text: systemPrompt }] }, 
+                        { role: "model", parts: [{text: "指令已收到。我将严格作为“万象模拟器”的AI引擎运作，并始终以合法的JSON格式返回结果。" }] }, 
+                        { role: "user", parts: [{text: JSON.stringify(payload) }] } 
+                    ];
+                    const requestBody = { contents, safetySettings: [ {category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE"}, {category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE"}, {category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE"}, {category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE"} ], generationConfig: { temperature: 1.2, topK: 1, topP: 0.95, maxOutputTokens: 8192 } };
+                    requestOptions = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+                        body: JSON.stringify(requestBody)
+                    };
+                } else { // 'openai' 兼容协议
+                    requestUrl = `${url.replace(/\/$/, '')}/v1/chat/completions`; // 确保URL尾部没有斜杠
+                    const messages = [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: JSON.stringify(payload) }
+                    ];
+                    const requestBody = {
+                        model: model,
+                        messages: messages,
+                        temperature: 1.2,
+                        max_tokens: 4096, // 适配OpenAI参数名
+                        response_format: { "type": "json_object" } // 请求JSON输出
+                    };
+                    requestOptions = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+                        body: JSON.stringify(requestBody)
+                    };
+                }
+
+                const response = await fetch(requestUrl, requestOptions);
+                if (!response.ok) throw new Error(`API 错误: ${response.status} ${response.statusText}`);
+                const data = await response.json();
+                
+                // 根据协议类型解析不同的响应
+                if (protocol === 'gemini') {
+                    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        if(data.promptFeedback?.blockReason) throw new Error(`请求被Google阻止: ${data.promptFeedback.blockReason}`);
+                        throw new Error('Gemini API响应格式不正确或为空。');
+                    }
+                    rawText = data.candidates[0].content.parts[0].text;
+                } else { // 'openai' 兼容协议
+                    if (!data.choices?.[0]?.message?.content) {
+                         throw new Error('OpenAI兼容API响应格式不正确或为空。');
+                    }
+                    rawText = data.choices[0].message.content;
+                }
+                
+                const cleanedText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(cleanedText);
+
+            } catch (error) {
+                console.error("API Call or JSON Parse Failed. Error:", error, "Raw Text from API:", rawText);
+                showToast(`API请求或解析失败: ${error.message}`, 6000);
+                return null;
+            } finally {
+                setAiTyping(false);
+            }
+        }
+        
+        function updateRecentSpeakers(authorName) { if (!worldData.personas.some(p => p.name === authorName)) return; recentSpeakers.push(authorName); if (recentSpeakers.length > RECENT_SPEAKER_MEMORY) { recentSpeakers.shift(); } }
+        function init() { loadData(); document.body.addEventListener('click', handleGlobalClick); elements.importFileInput.addEventListener('change', handleImportFile); if (localStorage.getItem(WORLD_DATA_KEY)) { startApp(); } else { showWorldForge(); } }
+        function startApp() { elements.worldForgePage.style.display = 'none'; elements.omnisimApp.style.display = 'flex'; elements.footerCredit.style.display = 'block'; elements.settingsFab.style.display = 'flex'; if (!appState.currentUserPersonaId && worldData.personas.length > 0) { appState.currentUserPersonaId = worldData.personas[0].id; saveAppState(); } renderAll(); switchPage(appState.currentPage || 'timeline'); }
+        function showWorldForge() { elements.worldForgePage.style.display = 'flex'; elements.omnisimApp.style.display = 'none'; elements.footerCredit.style.display = 'none'; elements.settingsFab.style.display = 'none'; populateWorldForgeForm(); renderPersonaList(); }
+
+        function populateWorldForgeForm(){elements.worldNameInput.value=worldData.worldName;elements.worldviewInput.value=worldData.worldview;elements.aiDirectiveInput.value=worldData.aiDirective;elements.forgeApiProtocolSelect.value=worldData.apiConfig.protocol;elements.forgeApiKeyInput.value=worldData.apiConfig.key;elements.forgeApiUrlInput.value=worldData.apiConfig.url;elements.forgeApiModelInput.value=worldData.apiConfig.model}
+        function renderPersonaList(){elements.personaListContainer.innerHTML=worldData.personas.map((p,index)=>`<div class="persona-card"><h4>${p.name} (@${p.id})</h4><p style="font-size:14px; color: #6E7681; margin:0;">${p.bio}</p><div class="persona-card-actions"><button data-action="edit-persona" data-index="${index}">编辑</button><button data-action="delete-persona" data-index="${index}">删除</button></div></div>`).join("")||'<p style="text-align:center; color: var(--text-muted);">暂无角色，请点击下方按钮添加。</p>'}
+        function openPersonaForm(index=null){elements.addPersonaBtn.style.display="none";if(index!==null){const p=worldData.personas[index];elements.personaFormTitle.textContent="编辑角色";elements.editingPersonaIndex.value=index;elements.personaName.value=p.name;elements.personaId.value=p.id;elements.personaBio.value=p.bio;elements.personaDesc.value=p.desc}else{elements.personaFormTitle.textContent="添加新角色";elements.editingPersonaIndex.value="";elements.personaName.value="";elements.personaId.value="";elements.personaBio.value="";elements.personaDesc.value=""}elements.personaForm.style.display="block"}
+        function closePersonaForm(){elements.personaForm.style.display="none";elements.addPersonaBtn.style.display="block"}
+        function handleSavePersona(){const index=elements.editingPersonaIndex.value;const persona={name:elements.personaName.value.trim(),id:elements.personaId.value.trim().replace(/ /g,"_"),bio:elements.personaBio.value.trim(),desc:elements.personaDesc.value.trim()};if(!persona.name||!persona.id){showToast("姓名和ID是必填项");return}if(index!==""){worldData.personas[index]=persona}else{if(worldData.personas.some(p=>p.id===persona.id)){showToast(`ID "${persona.id}" 已存在，请使用唯一的ID。`);return}worldData.personas.push(persona)}renderPersonaList();closePersonaForm()}
+        
+        // **v1.4 更新**
+        function handleForgeWorld(){
+            const name=elements.worldNameInput.value.trim();
+            const view=elements.worldviewInput.value.trim();
+            const protocol = elements.forgeApiProtocolSelect.value;
+            const key=elements.forgeApiKeyInput.value.trim();
+            const url=elements.forgeApiUrlInput.value.trim();
+            const model=elements.forgeApiModelInput.value.trim();
+            if(!name||!view||worldData.personas.length===0||!key||!url||!model){showToast("请填写所有必填项：世界名称、世界观、至少一个角色和完整的API凭证。");return}
+            worldData.worldName=name;worldData.worldview=view;worldData.aiDirective=elements.aiDirectiveInput.value.trim();
+            worldData.apiConfig={protocol, key, url, model};
+            appState.currentUserPersonaId=worldData.personas[0].id;appState.posts=[];
+            saveWorldData();saveAppState();showToast("世界铸造成功！正在进入...",2e3);
+            setTimeout(startApp,1e3);
+        }
+
+        function handleGlobalClick(e) { const target = e.target; const action = target.dataset.action; if (action === 'edit-persona') openPersonaForm(target.dataset.index); if (action === 'delete-persona') { if(confirm('确定要删除这个角色吗？')) { worldData.personas.splice(target.dataset.index, 1); renderPersonaList(); } } if (target === elements.addPersonaBtn) openPersonaForm(); if (target === elements.savePersonaBtn) handleSavePersona(); if (target === elements.cancelPersonaBtn) closePersonaForm(); if (target === elements.forgeWorldBtn) handleForgeWorld(); if (target === elements.forgeImportBtn) elements.importFileInput.click(); if (target.matches('.nav-item')) switchPage(target.dataset.page); if (target === elements.aiPostBtn) handleAiPost(); if (target === elements.userPostBtn) elements.postModal.classList.add('active'); if (target === elements.submitPostBtn) handleUserPost(); if (target.closest('.like-btn')) handleLikePost(target.closest('.like-btn')); if (target.closest('.comment-btn')) handleOpenCommentModal(target.closest('.comment-btn')); if (target.closest('.comment-author')) handleMention(target.closest('.comment-author')); if (target === elements.submitCommentBtn) handleUserComment(); if (target.closest('.delete-btn')) handleDelete(target.closest('.delete-btn')); if (target === elements.personaBtn) { populatePersonaModal(); elements.personaModal.classList.add('active'); } if (target === elements.savePersonaSwitchBtn) handleSwitchPersona(); if (target === elements.regenerateWorldBtn) { if(confirm('警告：这将返回世界铸造厂，并清空当前所有动态。世界设定将被保留。确定吗？')) { saveWorldData(); showWorldForge(); } } if (target === elements.exportWorldBtn) handleExportWorld(); if (target === elements.importWorldBtn) elements.importFileInput.click(); if (target === elements.settingsFab) handleOpenSettings(); if (target === elements.saveApiBtn) handleSaveApi(); if (target.closest('.modal-overlay') && target.classList.contains('modal-overlay')) target.classList.remove('active'); }
+        async function handleAiPost() { const list = elements.timelinePostsList; const spinner = document.createElement('div'); spinner.className = 'loading-spinner'; list.prepend(spinner); const postData = await callAI({ task: "GENERATE_POST" }); spinner.remove(); if (postData) { updateRecentSpeakers(postData.author); const newPost = { ...postData, timestamp: Date.now(), comments: [] }; appState.posts.unshift(newPost); renderPosts(); await triggerAIReplies(newPost.id); saveAppState(); } else { renderPosts(); } }
+        async function triggerAIReplies(postId) { const post = appState.posts.find(p => p.id === postId); if (!post) return; let exclusionList = [post.author, ...(post.comments || []).map(c => c.author)]; const fullCommentHistory = (post.comments || []).map(c => ({ author: c.author, text: c.text })); const replies = await callAI({ task: "GENERATE_REPLIES", post: { author: post.author, content: post.content }, fullCommentHistory: fullCommentHistory, commentersToExclude: [...new Set(exclusionList)] }, exclusionList); if (replies && Array.isArray(replies)) { replies.forEach(reply => updateRecentSpeakers(reply.author)); if (!post.comments) post.comments = []; post.comments.push(...replies); showToast("广场上有了新回声...", 2500); renderPosts(); saveAppState(); } }
+        async function handleUserPost() { const content = elements.postContentInput.value.trim(); const currentUser = getCurrentUserPersona(); if (!content || !currentUser) { showToast("内容不能为空或未选择身份"); return; } elements.postModal.classList.remove('active'); const post = { id: `post-user-${Date.now()}`, author: currentUser.name, content: content, liked: false, comments: [], timestamp: Date.now() }; appState.posts.unshift(post); renderPosts(); elements.postContentInput.value = ''; await triggerAIReplies(post.id); }
+        async function handleUserComment() { const content = elements.commentContentInput.value.trim(); const postId = loadingState.commentingOnPostId; const currentUser = getCurrentUserPersona(); if (!content || !postId || !currentUser) return; const post = appState.posts.find(p => p.id === postId); if (!post) return; elements.commentModal.classList.remove('active'); if (!post.comments) post.comments = []; post.comments.push({ author: currentUser.name, text: content }); renderPosts(); elements.commentContentInput.value = ''; loadingState.commentingOnPostId = null; await triggerAIReplies(post.id); }
+        function renderAll() { renderPosts(); renderProfile(); }
+        function renderPosts() { const list = elements.timelinePostsList; if (list.querySelector('.loading-spinner')) list.innerHTML = ''; if (appState.posts.length === 0) { list.innerHTML = `<div class="empty-state">广场上静悄悄...<br>发布第一条动态或让AI生成吧！</div>`; return; } const sortedPosts = appState.posts.slice().sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)); const currentUser = getCurrentUserPersona(); list.innerHTML = sortedPosts.map(post => { const authorPersona = worldData.personas.find(p => p.name === post.author) || { name: post.author, id: post.author.toLowerCase(), bio: '匿名网友', desc: ''}; const authorAvatar = authorPersona.name[0].toUpperCase(); const deleteBtnHTML = (currentUser && post.author === currentUser.name) ? `<button class="delete-btn" data-type="post" data-id="${post.id}">&times;</button>` : ''; const commentsHTML = (post.comments || []).map((reply, index) => { const commentDeleteBtn = (currentUser && reply.author === currentUser.name) ? `<button class="delete-btn" data-type="comment" data-post-id="${post.id}" data-comment-index="${index}">&times;</button>` : ''; const renderedText = reply.text.replace(/@(\S+)/g, '<span class="mention">@$1</span>'); return `<div class="comment" data-post-id="${post.id}"><span class="comment-author" data-author-id="${worldData.personas.find(p => p.name === reply.author)?.id || ''}">${reply.author}</span>: <span class="comment-text">${renderedText}</span>${commentDeleteBtn}</div>`; }).join(''); return ` <div class="post-card" data-post-id="${post.id}"> ${deleteBtnHTML} <div class="post-header"> <div class="post-author-avatar" style="background-color:${getAvatarColor(authorAvatar)}">${authorAvatar}</div> <div class="post-author-details"> <div class="name">${post.author}</div> <div class="time">${new Date(post.timestamp).toLocaleString('zh-CN', { hour: '2-digit', minute:'2-digit' })}</div> </div> </div> <div class="post-content">${post.content}</div> ${post.comments.length > 0 ? `<div class="comments-section">${commentsHTML}</div>` : ''} <div class="post-footer"> <div class="footer-action like-btn ${post.liked ? 'liked' : ''}" data-id="${post.id}">♡ ${post.liked ? '已赞' : '点赞'}</div> <div class="footer-action comment-btn" data-id="${post.id}">💬 评论</div> </div> </div>`; }).join(''); }
+        function renderProfile() { const user = getCurrentUserPersona(); if (!user) { elements.profileAvatar.textContent = '?'; elements.profileName.textContent = '未选择身份'; elements.profileId.textContent = 'ID: N/A'; elements.profileBio.textContent = '请在下方选择一个身份'; return; } const avatarChar = user.name[0].toUpperCase(); elements.profileAvatar.textContent = avatarChar; elements.profileAvatar.style.backgroundColor = getAvatarColor(avatarChar); elements.profileName.textContent = user.name; elements.profileId.textContent = `ID: @${user.id}`; elements.profileBio.textContent = user.bio; }
+        function handleDelete(btn) { const type = btn.dataset.type; if (type === 'post') { if (confirm(`确定要删除这条动态吗？`)) { appState.posts = appState.posts.filter(p => p.id !== btn.dataset.id); renderPosts(); saveAppState(); showToast("动态已删除。"); } } else if (type === 'comment') { const post = appState.posts.find(p => p.id === btn.dataset.postId); if (post && confirm(`确定要删除这条评论吗？`)) { post.comments.splice(parseInt(btn.dataset.commentIndex), 1); renderPosts(); saveAppState(); showToast("评论已删除。"); } } }
+        function handleLikePost(btn) { const post = appState.posts.find(p => p.id === btn.dataset.id); if (post) { post.liked = !post.liked; renderPosts(); saveAppState(); } }
+        function handleOpenCommentModal(btn) { loadingState.commentingOnPostId = btn.dataset.id; elements.commentContentInput.value = ''; elements.commentModal.classList.add('active'); elements.commentContentInput.focus(); }
+        function handleMention(authorElement) { const authorId = authorElement.dataset.authorId; if (!authorId) { showToast('该用户为匿名网友，无法@'); return; } const postId = authorElement.closest('.comment').dataset.postId; loadingState.commentingOnPostId = postId; elements.commentModal.classList.add('active'); elements.commentContentInput.value = `@${authorId} `; elements.commentContentInput.focus(); }
+        
+        // **v1.4 更新**
+        function handleOpenSettings() {
+            elements.apiProtocolSelect.value = worldData.apiConfig.protocol;
+            elements.apiKeyInput.value = worldData.apiConfig.key;
+            elements.apiUrlInput.value = worldData.apiConfig.url;
+            elements.apiModelInput.value = worldData.apiConfig.model;
+            elements.apiModal.classList.add('active');
+        }
+        function handleSaveApi() {
+            const protocol = elements.apiProtocolSelect.value;
+            const key = elements.apiKeyInput.value.trim();
+            const url = elements.apiUrlInput.value.trim();
+            const model = elements.apiModelInput.value.trim();
+            if (!key || !url || !model) { showToast('所有字段均为必填项'); return; }
+            worldData.apiConfig = { protocol, key, url, model };
+            saveWorldData();
+            elements.apiModal.classList.remove('active');
+            showToast("网络配置已更新。");
+        }
+
+        function populatePersonaModal() { elements.personaSelect.innerHTML = worldData.personas.map(p => `<option value="${p.id}">${p.name}</option>`).join(''); elements.personaSelect.value = appState.currentUserPersonaId; }
+        function handleSwitchPersona() { appState.currentUserPersonaId = elements.personaSelect.value; recentSpeakers = []; saveAppState(); renderProfile(); elements.personaModal.classList.remove('active'); showToast(`身份已切换为: ${getCurrentUserPersona().name}`); }
+        function handleExportWorld() { const dataToExport = { ...worldData }; delete dataToExport.apiConfig; const dataStr = JSON.stringify(dataToExport, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${worldData.worldName || 'omnisim-world'}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showToast('世界设定已导出！(不含API信息)'); }
+        function handleImportFile(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { const importedData = JSON.parse(e.target.result); if (importedData.worldName && importedData.worldview && importedData.personas) { if (confirm('这将覆盖您当前的世界设定（API信息除外）并清空动态，确定要导入吗？')) { worldData.worldName = importedData.worldName; worldData.worldview = importedData.worldview; worldData.aiDirective = importedData.aiDirective || ''; worldData.personas = importedData.personas; appState.posts = []; appState.currentUserPersonaId = worldData.personas[0]?.id || null; saveWorldData(); saveAppState(); showWorldForge(); showToast('世界设定导入成功！请检查并保存。', 4000); } } else { showToast('导入失败：文件格式不正确。'); } } catch (error) { showToast('导入失败：无法解析文件。'); } event.target.value = ''; }; reader.readAsText(file); }
+        function setAiTyping(isTyping) { loadingState.isAiTyping = isTyping; elements.userPostBtn.disabled = isTyping; elements.aiPostBtn.disabled = isTyping; elements.aiPostBtn.textContent = isTyping ? 'AI正在输入...' : '广场新动态'; }
+        const showToast = (message, duration = 3000) => { elements.toast.textContent = message; elements.toast.classList.add('show'); setTimeout(() => { elements.toast.classList.remove('show'); }, duration); };
+        function switchPage(pageId) { appState.currentPage = pageId; saveAppState(); elements.pages.forEach(p => p.classList.remove('active')); document.getElementById(`page-${pageId}`).classList.add('active'); elements.navItems.forEach(n => n.classList.remove('active')); document.querySelector(`.nav-item[data-page="${pageId}"]`).classList.add('active'); elements.headerTitle.textContent = { timeline: '动态广场', profile: '我的' }[pageId]; }
+        const getAvatarColor = (char) => { if (!char) return '#CCCCCC'; const colors = ['#6A88A6', '#8E9B81', '#A3B1C6', '#C7B59D', '#8C7A6B', '#92849D', '#D4A47B']; return colors[char.charCodeAt(0) % colors.length]; };
+        const getCurrentUserPersona = () => worldData.personas.find(p => p.id === appState.currentUserPersonaId);
+
+        init();
+    });
+    </script>
+</body>
+</html>
